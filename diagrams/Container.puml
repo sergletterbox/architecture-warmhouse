@@ -1,0 +1,52 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Component Level - Backend Services
+
+Container(api_gateway, "API Gateway", "Kong/AWS API Gateway", "Маршрутизация запросов")
+Container(iot_gateway, "IoT Gateway", "Локальный шлюз устройств")
+Container(message_broker, "Message Broker", "Apache Kafka", "Брокер сообщений для асинхронной обработки событий")
+System_Ext(partner_systems, "Partner APIs", "External APIs", "API производителей")
+System_Ext(notification_providers, "Notification Providers", "External Services", "Push, Email, SMS")
+
+System_Boundary(backend_services, "Backend Services") {
+    Component(device_management, "Device Management Component", "Java + PostgreSQL", "Управление устройствами, состояниями, выполнение команд")
+
+    Component(user_management, "User Management Component", "Java + PostgreSQL", "Управление пользователями, аутентификация, подписки")
+
+    Component(scenario_engine, "Scenario Engine Component", "Java + PostgreSQL", "Обработка сценариев автоматизации и правил")
+
+    Component(notification_component, "Notification Component", "Java + PostgreSQL", "Управление и отправка уведомлений пользователям")
+
+    Component(telemetry_component, "Telemetry Component", "Java + PostgreSQL", "Сбор, обработка и хранение телеметрических данных")
+}
+
+' External connections
+Rel(api_gateway, user_management, "Запросы пользователей", "HTTP/REST")
+Rel(api_gateway, device_management, "Запросы устройств", "HTTP/REST")
+Rel(api_gateway, telemetry_component, "Запросы телеметрии", "HTTP/REST")
+Rel(api_gateway, scenario_engine, "Запросы сценариев", "HTTP/REST")
+
+Rel(iot_gateway, device_management, "Состояния устройств", "WebSocket/HTTPS")
+Rel(iot_gateway, telemetry_component, "Данные телеметрии", "WebSocket/HTTPS")
+
+Rel(device_management, iot_gateway, "Команды управления устройствами", "WebSocket/HTTPS")
+
+' Message Broker interactions
+Rel(device_management, message_broker, "Публикует события устройств", "Kafka Protocol")
+Rel(telemetry_component, message_broker, "Публикует телеметрические события", "Kafka Protocol")
+Rel(scenario_engine, message_broker, "Публикует события сценариев", "Kafka Protocol")
+
+Rel(scenario_engine, message_broker, "Слушает события устройств и телеметрии", "Kafka Protocol")
+Rel(notification_component, message_broker, "Слушает все события для уведомлений", "Kafka Protocol")
+
+' Inter-component interactions
+Rel(scenario_engine, device_management, "Выполняет автоматические команды", "Internal API")
+Rel(user_management, device_management, "Проверяет права доступа к устройствам", "Internal API")
+Rel(user_management, scenario_engine, "Проверяет права на сценарии", "Internal API")
+
+' External integrations
+Rel(device_management, partner_systems, "Интеграция с устройствами партнёров", "REST API")
+Rel(notification_component, notification_providers, "Отправка уведомлений", "HTTP API")
+
+@enduml

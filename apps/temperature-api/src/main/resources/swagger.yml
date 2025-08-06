@@ -1,0 +1,44 @@
+openapi: 3.0.3
+info:
+  title: Temperature API
+  description: API для получения температуры в помещениях
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8081
+
+paths:
+  /temperature:
+    get:
+      summary: Получить температуру в помещении
+      parameters:
+        - name: location
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - LIVING_ROOM
+              - BEDROOM
+              - KITCHEN
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemperatureResponse'
+        '400':
+          description: Неверный параметр
+
+components:
+  schemas:
+    TemperatureResponse:
+      type: object
+      properties:
+        location:
+          type: string
+        temperature:
+          type: number
+        unit:
+          type: string
