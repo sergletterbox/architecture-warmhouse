@@ -8,7 +8,7 @@ Container(iot_gateway, "IoT Gateway", "Локальный шлюз устрой�
 System_Ext(partner_systems, "Partner APIs", "External APIs", "API производителей")
 System_Ext(notification_providers, "Notification Providers", "External Services", "Push, Email, SMS")
 
-System_Boundary(backend_services, "Backend Services") {
+Container_Boundary(backend_services, "Backend Services") {
     Component(message_queue, "Message Queue Component", "Apache Kafka", "Брокер сообщений для асинхронной обработки событий")
 
     Component(device_management, "Device Management Component", "Java + PostgreSQL", "Управление устройствами, состояниями, выполнение команд")

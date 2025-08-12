@@ -1,52 +1,54 @@
 @startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
 
-title Component Level - Backend Services
+title Container Level - Smart Home SaaS Ecosystem
 
-Container(api_gateway, "API Gateway", "Kong/AWS API Gateway", "Маршрутизация запросов")
-Container(iot_gateway, "IoT Gateway", "Локальный шлюз устройств")
-Container(message_broker, "Message Broker", "Apache Kafka", "Брокер сообщений для асинхронной обработки событий")
-System_Ext(partner_systems, "Partner APIs", "External APIs", "API производителей")
-System_Ext(notification_providers, "Notification Providers", "External Services", "Push, Email, SMS")
+Person(user, "Пользователь", "Владелец умного дома")
 
-System_Boundary(backend_services, "Backend Services") {
-    Component(device_management, "Device Management Component", "Java + PostgreSQL", "Управление устройствами, состояниями, выполнение команд")
+System_Boundary(saas_platform, "Smart Home SaaS Platform") {
+    Container(web_app, "Web Application", "React/Vue.js", "Веб-интерфейс для управления умным домом")
+    Container(mobile_app, "Mobile Application", "React Native/Flutter", "Мобильное приложение")
 
-    Component(user_management, "User Management Component", "Java + PostgreSQL", "Управление пользователями, аутентификация, подписки")
+    Container(api_gateway, "API Gateway", "Kong/AWS API Gateway", "Единая точка входа, аутентификация, маршрутизация")
 
-    Component(scenario_engine, "Scenario Engine Component", "Java + PostgreSQL", "Обработка сценариев автоматизации и правил")
+    Container(backend_services, "Backend Services", "Microservices (Java/Node.js/Go/Python)", "Управление устройствами, пользователями, телеметрией, автоматизацией и уведомлениями")
 
-    Component(notification_component, "Notification Component", "Java + PostgreSQL", "Управление и отправка уведомлений пользователям")
-
-    Component(telemetry_component, "Telemetry Component", "Java + PostgreSQL", "Сбор, обработка и хранение телеметрических данных")
+    Container(message_broker, "Message Broker", "Apache Kafka/RabbitMQ", "Асинхронная обработка команд и событий")
 }
 
-' External connections
-Rel(api_gateway, user_management, "Запросы пользователей", "HTTP/REST")
-Rel(api_gateway, device_management, "Запросы устройств", "HTTP/REST")
-Rel(api_gateway, telemetry_component, "Запросы телеметрии", "HTTP/REST")
-Rel(api_gateway, scenario_engine, "Запросы сценариев", "HTTP/REST")
+System_Boundary(home_network, "Home Network") {
+    Container(iot_gateway, "IoT Gateway", "Локальный шлюз для подключения устройств")
+    Container(smart_devices, "Smart Devices", "Умные устройства различных типов")
+}
 
-Rel(iot_gateway, device_management, "Состояния устройств", "WebSocket/HTTPS")
-Rel(iot_gateway, telemetry_component, "Данные телеметрии", "WebSocket/HTTPS")
+System_Ext(notification_providers, "Notification Providers", "Push, Email, SMS сервисы")
+System_Ext(partner_systems, "Partner Device APIs", "API производителей устройств")
 
-Rel(device_management, iot_gateway, "Команды управления устройствами", "WebSocket/HTTPS")
+' User interactions
+Rel(user, web_app, "Управляет домом", "HTTPS")
+Rel(user, mobile_app, "Управляет домом", "HTTPS")
 
-' Message Broker interactions
-Rel(device_management, message_broker, "Публикует события устройств", "Kafka Protocol")
-Rel(telemetry_component, message_broker, "Публикует телеметрические события", "Kafka Protocol")
-Rel(scenario_engine, message_broker, "Публикует события сценариев", "Kafka Protocol")
+' Frontend to backend
+Rel(web_app, api_gateway, "API запросы", "REST/GraphQL")
+Rel(mobile_app, api_gateway, "API запросы", "REST/GraphQL")
 
-Rel(scenario_engine, message_broker, "Слушает события устройств и телеметрии", "Kafka Protocol")
-Rel(notification_component, message_broker, "Слушает все события для уведомлений", "Kafka Protocol")
+' API Gateway to services
+Rel(api_gateway, backend_services, "Маршрутизирует запросы", "HTTP/gRPC")
 
-' Inter-component interactions
-Rel(scenario_engine, device_management, "Выполняет автоматические команды", "Internal API")
-Rel(user_management, device_management, "Проверяет права доступа к устройствам", "Internal API")
-Rel(user_management, scenario_engine, "Проверяет права на сценарии", "Internal API")
+' Services interactions via message broker
+Rel(backend_services, message_broker, "Публикует/подписывается на события", "AMQP/Kafka")
+
+' IoT interactions
+Rel(iot_gateway, smart_devices, "Управляет")
+Rel(iot_gateway, backend_services, "Отправляет данные/получает команды", "HTTPS/WebSocket")
+Rel(smart_devices, iot_gateway, "Отправляет телеметрию")
 
 ' External integrations
-Rel(device_management, partner_systems, "Интеграция с устройствами партнёров", "REST API")
-Rel(notification_component, notification_providers, "Отправка уведомлений", "HTTP API")
+Rel(backend_services, partner_systems, "Интегрируется с устройствами", "REST APIs")
+Rel(backend_services, notification_providers, "Отправляет уведомления", "HTTP APIs")
+
+' Notifications to users
+Rel(notification_providers, mobile_app, "Push уведомления", "Push Protocols")
+Rel(notification_providers, user, "Email/SMS", "SMTP/SMS")
 
 @enduml
