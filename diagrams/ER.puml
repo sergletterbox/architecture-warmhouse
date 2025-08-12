@@ -1,0 +1,185 @@
+@startuml
+!theme plain
+title ER Diagram - Smart Home Database Model
+
+entity "User" {
+  * id : UUID <<PK>>
+  --
+  * email : VARCHAR(255) <<UNIQUE>>
+  * password_hash : VARCHAR(255)
+  * first_name : VARCHAR(100)
+  * last_name : VARCHAR(100)
+  * phone : VARCHAR(20)
+  * subscription_type : ENUM('BASIC', 'PREMIUM', 'ENTERPRISE')
+  * subscription_expires : TIMESTAMP
+  * created_at : TIMESTAMP
+  * updated_at : TIMESTAMP
+  * is_active : BOOLEAN
+}
+
+entity "House" {
+  * id : UUID <<PK>>
+  --
+  * user_id : UUID <<FK>>
+  * name : VARCHAR(100)
+  * address : TEXT
+  * timezone : VARCHAR(50)
+  * created_at : TIMESTAMP
+  * updated_at : TIMESTAMP
+  * is_active : BOOLEAN
+}
+
+entity "Module" {
+  * id : UUID <<PK>>
+  --
+  * house_id : UUID <<FK>>
+  * name : VARCHAR(100)
+  * type : ENUM('LIGHTING', 'ACCESS', 'HEATING', 'HUMIDITY', 'VENTILATION', 'SECURITY', 'ENERGY')
+  * description : TEXT
+  * location : VARCHAR(100)
+  * created_at : TIMESTAMP
+  * updated_at : TIMESTAMP
+  * is_active : BOOLEAN
+}
+
+entity "DeviceType" {
+  * id : UUID <<PK>>
+  --
+  * name : VARCHAR(100)
+  * category : ENUM('SENSOR', 'ACTUATOR', 'CONTROLLER')
+  * protocol : ENUM('ZIGBEE', 'ZWAVE', 'WIFI', 'BLUETOOTH', 'PARTNER_API')
+  * manufacturer : VARCHAR(100)
+  * model : VARCHAR(100)
+  * capabilities : JSON
+  * created_at : TIMESTAMP
+}
+
+entity "Device" {
+  * id : UUID <<PK>>
+  --
+  * module_id : UUID <<FK>>
+  * device_type_id : UUID <<FK>>
+  * name : VARCHAR(100)
+  * serial_number : VARCHAR(100) <<UNIQUE>>
+  * mac_address : VARCHAR(17)
+  * location : ENUM('LIVING_ROOM', 'BEDROOM', 'KITCHEN')
+  * firmware_version : VARCHAR(50)
+  * current_state : JSON
+  * last_seen : TIMESTAMP
+  * is_online : BOOLEAN
+  * created_at : TIMESTAMP
+  * updated_at : TIMESTAMP
+  * is_active : BOOLEAN
+}
+
+entity "TelemetryData" {
+  * id : UUID <<PK>>
+  --
+  * device_id : UUID <<FK>>
+  * metric_name : VARCHAR(100)
+  * metric_value : DECIMAL(10,4)
+  * unit : VARCHAR(20)
+  * timestamp : TIMESTAMP
+  * quality : ENUM('GOOD', 'BAD', 'UNCERTAIN')
+}
+
+entity "DeviceCommand" {
+  * id : UUID <<PK>>
+  --
+  * device_id : UUID <<FK>>
+  * user_id : UUID <<FK>>
+  * command : VARCHAR(100)
+  * parameters : JSON
+  * status : ENUM('PENDING', 'EXECUTING', 'SUCCESS', 'FAILED')
+  * error_message : TEXT
+  * created_at : TIMESTAMP
+  * executed_at : TIMESTAMP
+}
+
+entity "Scenario" {
+  * id : UUID <<PK>>
+  --
+  * house_id : UUID <<FK>>
+  * user_id : UUID <<FK>>
+  * name : VARCHAR(100)
+  * description : TEXT
+  * trigger_conditions : JSON
+  * actions : JSON
+  * is_active : BOOLEAN
+  * created_at : TIMESTAMP
+  * updated_at : TIMESTAMP
+}
+
+entity "ScenarioExecution" {
+  * id : UUID <<PK>>
+  --
+  * scenario_id : UUID <<FK>>
+  * trigger_event : JSON
+  * status : ENUM('SUCCESS', 'FAILED', 'PARTIAL')
+  * error_message : TEXT
+  * executed_at : TIMESTAMP
+  * execution_time_ms : INTEGER
+}
+
+entity "Notification" {
+  * id : UUID <<PK>>
+  --
+  * user_id : UUID <<FK>>
+  * type : ENUM('DEVICE_ALERT', 'SCENARIO_EXECUTED', 'SYSTEM_WARNING', 'SECURITY_EVENT')
+  * title : VARCHAR(200)
+  * message : TEXT
+  * channel : ENUM('PUSH', 'EMAIL', 'SMS')
+  * status : ENUM('PENDING', 'SENT', 'FAILED')
+  * related_entity_id : UUID
+  * related_entity_type : VARCHAR(50)
+  * created_at : TIMESTAMP
+  * sent_at : TIMESTAMP
+}
+
+entity "UserAccess" {
+  * id : UUID <<PK>>
+  --
+  * user_id : UUID <<FK>>
+  * house_id : UUID <<FK>>
+  * access_level : ENUM('OWNER', 'ADMIN', 'USER', 'GUEST')
+  * permissions : JSON
+  * granted_at : TIMESTAMP
+  * granted_by : UUID <<FK>>
+  * expires_at : TIMESTAMP
+  * is_active : BOOLEAN
+}
+
+entity "DeviceEvent" {
+  * id : UUID <<PK>>
+  --
+  * device_id : UUID <<FK>>
+  * event_type : ENUM('STATE_CHANGED', 'CONNECTED', 'DISCONNECTED', 'ERROR', 'MAINTENANCE')
+  * event_data : JSON
+  * severity : ENUM('INFO', 'WARNING', 'ERROR', 'CRITICAL')
+  * timestamp : TIMESTAMP
+}
+
+' Relationships
+User ||--o{ House : "owns"
+User ||--o{ DeviceCommand : "executes"
+User ||--o{ Scenario : "creates"
+User ||--o{ Notification : "receives"
+User ||--o{ UserAccess : "has access"
+
+House ||--o{ Module : "contains"
+House ||--o{ Scenario : "belongs to"
+House ||--o{ UserAccess : "grants access to"
+
+Module ||--o{ Device : "includes"
+
+DeviceType ||--o{ Device : "defines"
+
+Device ||--o{ TelemetryData : "generates"
+Device ||--o{ DeviceCommand : "receives"
+Device ||--o{ DeviceEvent : "produces"
+
+Scenario ||--o{ ScenarioExecution : "executed as"
+
+User ||--o{ UserAccess : "granted by"
+
+@enduml

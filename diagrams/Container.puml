@@ -1,0 +1,54 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Container Level - Smart Home SaaS Ecosystem
+
+Person(user, "Пользователь", "Владелец умного дома")
+
+System_Boundary(saas_platform, "Smart Home SaaS Platform") {
+    Container(web_app, "Web Application", "React/Vue.js", "Веб-интерфейс для управления умным домом")
+    Container(mobile_app, "Mobile Application", "React Native/Flutter", "Мобильное приложение")
+
+    Container(api_gateway, "API Gateway", "Kong/AWS API Gateway", "Единая точка входа, аутентификация, маршрутизация")
+
+    Container(backend_services, "Backend Services", "Microservices (Java/Node.js/Go/Python)", "Управление устройствами, пользователями, телеметрией, автоматизацией и уведомлениями")
+
+    Container(message_broker, "Message Broker", "Apache Kafka/RabbitMQ", "Асинхронная обработка команд и событий")
+}
+
+System_Boundary(home_network, "Home Network") {
+    Container(iot_gateway, "IoT Gateway", "Локальный шлюз для подключения устройств")
+    Container(smart_devices, "Smart Devices", "Умные устройства различных типов")
+}
+
+System_Ext(notification_providers, "Notification Providers", "Push, Email, SMS сервисы")
+System_Ext(partner_systems, "Partner Device APIs", "API производителей устройств")
+
+' User interactions
+Rel(user, web_app, "Управляет домом", "HTTPS")
+Rel(user, mobile_app, "Управляет домом", "HTTPS")
+
+' Frontend to backend
+Rel(web_app, api_gateway, "API запросы", "REST/GraphQL")
+Rel(mobile_app, api_gateway, "API запросы", "REST/GraphQL")
+
+' API Gateway to services
+Rel(api_gateway, backend_services, "Маршрутизирует запросы", "HTTP/gRPC")
+
+' Services interactions via message broker
+Rel(backend_services, message_broker, "Публикует/подписывается на события", "AMQP/Kafka")
+
+' IoT interactions
+Rel(iot_gateway, smart_devices, "Управляет")
+Rel(iot_gateway, backend_services, "Отправляет данные/получает команды", "HTTPS/WebSocket")
+Rel(smart_devices, iot_gateway, "Отправляет телеметрию")
+
+' External integrations
+Rel(backend_services, partner_systems, "Интегрируется с устройствами", "REST APIs")
+Rel(backend_services, notification_providers, "Отправляет уведомления", "HTTP APIs")
+
+' Notifications to users
+Rel(notification_providers, mobile_app, "Push уведомления", "Push Protocols")
+Rel(notification_providers, user, "Email/SMS", "SMTP/SMS")
+
+@enduml

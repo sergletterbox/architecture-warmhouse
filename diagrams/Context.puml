@@ -1,0 +1,25 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title Диаграмма контекста - Система управления отоплением
+
+Person(homeowner, "Владелец дома", "Пользователь системы отопления")
+Person(technician, "Специалист по подключению", "Устанавливает и подключает датчики отопления к системе")
+
+System(heating_system, "Система управления отоплением", "Монолитное приложение на Go с PostgreSQL для управления отоплением и мониторинга температуры")
+
+System_Ext(heating_сontroller, "Контроллер отопления", "Физические устройства управления отоплением в доме")
+System_Ext(heating_sensors, "Датчики температуры", "Физические устройства для измерения температуры")
+System_Ext(heating_equipment, "Отопительное оборудование")
+
+Rel(homeowner, heating_system, "Управляет отоплением и проверяет температуру", "HTTPS/Web UI")
+Rel(technician, heating_sensors, "Устанавливает и подключает к системе")
+Rel(technician, heating_сontroller, "Устанавливает и подключает к системе")
+Rel(technician, heating_system, "Настраивает подключенные датчики", "HTTPS/Admin UI")
+
+Rel(heating_system, heating_сontroller, "Отправляет команды управления", "TCP/IP")
+Rel(heating_сontroller, heating_equipment, "Управляет работой отопления", "Электрические сигналы")
+Rel(heating_sensors, heating_system, "Передает данные о температуре по запросу", "TCP/IP")
+
+SHOW_LEGEND()
+@enduml

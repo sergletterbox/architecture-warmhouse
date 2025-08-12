@@ -1,0 +1,73 @@
+@startuml
+title Выполнение команды управления устройством
+
+actor User as "Пользователь"
+participant MobileApp as "Mobile App"
+participant APIGateway as "API Gateway"
+participant UserManagement as "User Management\nComponent"
+participant DeviceManagement as "Device Management\nComponent"
+participant MessageBroker as "Message Broker\n(Kafka)"
+participant IoTGateway as "IoT Gateway"
+participant SmartDevice as "Smart Device"
+participant ScenarioEngine as "Scenario Engine\nComponent"
+participant NotificationComponent as "Notification\nComponent"
+participant TelemetryComponent as "Telemetry\nComponent"
+
+User -> MobileApp: Нажимает "Включить свет"
+MobileApp -> APIGateway: POST /api/devices/{id}/commands\n{"action": "turn_on", "brightness": 80}
+
+APIGateway -> UserManagement: Validate user token
+UserManagement -> APIGateway: User authenticated
+
+APIGateway -> DeviceManagement: Forward command request
+DeviceManagement -> DeviceManagement: Validate command parameters
+DeviceManagement -> DeviceManagement: Check device exists and is online
+
+alt Device available
+    DeviceManagement -> IoTGateway: Send device command via WebSocket\n{"deviceId": "light_001", "action": "turn_on", "brightness": 80}
+    IoTGateway -> SmartDevice: Execute command via Zigbee/Z-Wave
+    SmartDevice -> IoTGateway: Command executed, return new state
+    IoTGateway -> DeviceManagement: Device state updated via WebSocket
+
+    DeviceManagement -> DeviceManagement: Update device state in PostgreSQL
+    DeviceManagement -> APIGateway: Success response\n{"status": "success", "new_state": {...}}
+
+    ' Publish event to message broker
+    DeviceManagement -> MessageBroker: Publish device state changed event\n{"eventType": "DEVICE_STATE_CHANGED", "deviceId": "light_001", ...}
+
+    APIGateway -> MobileApp: 200 OK {"status": "success", "new_state": {...}}
+    MobileApp -> User: Показать "Свет включён"
+
+    ' Asynchronous event processing
+    MessageBroker -> ScenarioEngine: Device state changed event
+    ScenarioEngine -> ScenarioEngine: Check automation rules\nfor this device change
+
+    alt Automation rule triggered
+        ScenarioEngine -> DeviceManagement: Execute automated command\n(e.g., close the curtains)
+        ScenarioEngine -> MessageBroker: Publish scenario executed event
+    end
+
+    MessageBroker -> NotificationComponent: Device state changed event
+    NotificationComponent -> NotificationComponent: Check user notification preferences
+
+    alt User wants notifications
+        NotificationComponent -> User: Send push notification\n"Light turned on in Living Room"
+    end
+
+else Device offline or error
+    DeviceManagement -> APIGateway: Error response\n{"status": "error", "message": "Device offline"}
+    APIGateway -> MobileApp: 400 Bad Request
+    MobileApp -> User: Показать "Устройство недоступно"
+
+    DeviceManagement -> MessageBroker: Publish device error event
+    MessageBroker -> NotificationComponent: Device error event
+    NotificationComponent -> User: Send error notification
+end
+
+' Telemetry collection (happens independently)
+SmartDevice -> IoTGateway: Send telemetry data\n(power consumption, status)
+IoTGateway -> TelemetryComponent: Forward telemetry via WebSocket
+TelemetryComponent -> TelemetryComponent: Store telemetry in PostgreSQL
+TelemetryComponent -> MessageBroker: Publish telemetry event\n(if threshold exceeded)
+
+@enduml
